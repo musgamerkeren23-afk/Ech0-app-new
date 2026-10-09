@@ -8,21 +8,20 @@
     {
       "client_info": {
         "mobilesdk_app_id": "1:340048218668:android:0bcd49e447ac9853531f89",
-        "android_client_info": {
-          "package_name": "com.hello.app"
-        }
+        "android_client_info": { "package_name": "com.hello.app" }
       },
       "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAI9Ezet3tyWdw1ittXhEg2tLFO9dczblw"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      "api_key": [ { "current_key": "AIzaSyAI9Ezet3tyWdw1ittXhEg2tLFO9dczblw" } ],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:340048218668:android:0bcd49e447ac9853531f89",
+        "android_client_info": { "package_name": "com.h4ll0.ech0" }
+      },
+      "oauth_client": [],
+      "api_key": [ { "current_key": "AIzaSyAI9Ezet3tyWdw1ittXhEg2tLFO9dczblw" } ],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
     }
   ],
   "configuration_version": "1"
