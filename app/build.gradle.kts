@@ -9,7 +9,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.hello.app"
+        applicationId = "com.h4ll0.ech0"
         minSdk = 26
         targetSdk = 34
         versionCode = 2
