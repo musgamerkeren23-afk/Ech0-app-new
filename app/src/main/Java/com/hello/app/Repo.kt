@@ -8,7 +8,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 data class UserProfile(
     val uid: String = "",
@@ -36,12 +38,26 @@ object Repo {
     val uid: String? get() = auth.currentUser?.uid
 
     // ---------- AUTH ----------
-    suspend fun register(username: String, email: String, pass: String) {
-        val res = auth.createUserWithEmailAndPassword(email, pass).await()
-        val u = res.user ?: throw IllegalStateException("Gagal membuat akun")
+    suspend fun register(username: String, email: String, pass: String) =
+        withContext(NonCancellable) {
+            val res = auth.createUserWithEmailAndPassword(email, pass).await()
+            val u = res.user ?: throw IllegalStateException("Gagal membuat akun")
+            db.collection("users").document(u.uid).set(
+                mapOf(
+                    "username" to username,
+                    "bio" to "",
+                    "photoUrl" to "",
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+        }
+
+    suspend fun createDefaultProfile() {
+        val u = auth.currentUser ?: return
+        val name = (u.email ?: "user").substringBefore("@").take(20).ifBlank { "user" }
         db.collection("users").document(u.uid).set(
             mapOf(
-                "username" to username,
+                "username" to name,
                 "bio" to "",
                 "photoUrl" to "",
                 "createdAt" to FieldValue.serverTimestamp()
