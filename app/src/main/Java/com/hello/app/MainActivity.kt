@@ -18,18 +18,32 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Ech0Theme { App() }
+            Ech0Theme {
+                var crash by remember { mutableStateOf(CrashStore.read(this@MainActivity)) }
+                val c = crash
+                if (c != null) {
+                    CrashScreen(c) {
+                        CrashStore.clear(this@MainActivity)
+                        crash = null
+                    }
+                } else {
+                    App()
+                }
+            }
         }
     }
 }
@@ -107,6 +121,14 @@ fun LoadingScreen() {
             Modifier.padding(top = 4.dp, start = 24.dp, end = 24.dp),
             style = MaterialTheme.typography.bodySmall
         )
+        val scope = rememberCoroutineScope()
+        val ctx = LocalContext.current
+        TextButton(onClick = {
+            scope.launch {
+                try { Repo.createDefaultProfile() }
+                catch (e: Exception) { toast(ctx, "Gagal: ${e.message}") }
+            }
+        }) { Text("Buat profil otomatis") }
         TextButton(onClick = { Repo.logout() }) { Text("Keluar") }
     }
 }
