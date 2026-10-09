@@ -1,10 +1,15 @@
 package com.hello.app
 
-import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ContentProvider
+import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,16 +37,40 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.Date
 
-class Ech0App : Application() {
-    override fun onCreate() {
-        super.onCreate()
+/** Jalan paling awal (sebelum Firebase) lewat ContentProvider ber-initOrder tertinggi. */
+class CrashInitProvider : ContentProvider() {
+    override fun onCreate(): Boolean {
+        context?.let { CrashHandler.install(it) }
+        return true
+    }
+
+    override fun query(
+        uri: Uri, projection: Array<String>?, selection: String?,
+        selectionArgs: Array<String>?, sortOrder: String?
+    ): Cursor? = null
+
+    override fun getType(uri: Uri): String? = null
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = null
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String>?): Int = 0
+    override fun update(
+        uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<String>?
+    ): Int = 0
+}
+
+object CrashHandler {
+    @Volatile
+    private var installed = false
+
+    fun install(ctx: Context) {
+        if (installed) return
+        installed = true
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, e ->
             try {
                 val sw = StringWriter()
                 e.printStackTrace(PrintWriter(sw))
                 val report = buildString {
-                    appendLine("=== ECH0 CRASH REPORT (v1.5.2) ===")
+                    appendLine("=== ECH0 CRASH REPORT (v1.5.3) ===")
                     appendLine("Waktu : ${Date()}")
                     appendLine("HP    : ${Build.MANUFACTURER} ${Build.MODEL}")
                     appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
@@ -49,11 +78,29 @@ class Ech0App : Application() {
                     appendLine()
                     append(sw.toString())
                 }.take(8000)
-                CrashStore.file(this).writeText(report)
+                try { CrashStore.file(ctx).writeText(report) } catch (_: Throwable) {}
+                try { copyToClipboard(ctx, report) } catch (_: Throwable) {}
+                try { saveToDownloads(ctx, report) } catch (_: Throwable) {}
             } catch (_: Throwable) {
             }
             previous?.uncaughtException(thread, e)
         }
+    }
+
+    private fun copyToClipboard(ctx: Context, report: String) {
+        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("ech0-crash", report))
+    }
+
+    private fun saveToDownloads(ctx: Context, report: String) {
+        if (Build.VERSION.SDK_INT < 29) return
+        val v = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, "ech0-crash-${System.currentTimeMillis() / 1000}.txt")
+            put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v) ?: return
+        ctx.contentResolver.openOutputStream(uri)?.use { it.write(report.toByteArray()) }
     }
 }
 
@@ -61,6 +108,7 @@ object CrashStore {
     fun file(ctx: Context) = File(ctx.filesDir, "crash.txt")
     fun read(ctx: Context): String? =
         file(ctx).takeIf { it.exists() }?.readText()?.takeIf { it.isNotBlank() }
+
     fun clear(ctx: Context) {
         file(ctx).delete()
     }
